@@ -1,7 +1,7 @@
 from rest_framework import viewsets
-from rest_framework.exceptions import PermissionDenied
 
 from posts.models import Comment, Group, Post
+from .permissions import OwnerOrReadOnly
 from .serializers import CommentSerializer, GroupSerializer, PostSerializer
 
 
@@ -10,22 +10,11 @@ class PostViewSet(viewsets.ModelViewSet):
 
     queryset = Post.objects.all()
     serializer_class = PostSerializer
+    permission_classes = (OwnerOrReadOnly,)
 
     def perform_create(self, serializer):
         """Добавляет автора к посту."""
         serializer.save(author=self.request.user)
-
-    def perform_update(self, serializer):
-        """Обновляет пост."""
-        if serializer.instance.author != self.request.user:
-            raise PermissionDenied('Изменение чужого поста запрещено!')
-        serializer.save()
-
-    def perform_destroy(self, instance):
-        """Удаляет пост."""
-        if instance.author != self.request.user:
-            raise PermissionDenied('Удаление чужого поста запрещено!')
-        instance.delete()
 
 
 class GroupViewSet(viewsets.ReadOnlyModelViewSet):
@@ -40,30 +29,14 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
+    permission_classes = (OwnerOrReadOnly,)
 
     def get_queryset(self):
-        """Возвращает комментарии к посту, заменяя id автора на имя."""
-        return super().get_queryset().filter(
-            post_id=self.kwargs.get('post_id')
-        )
+        return Post.objects.get(id=self.kwargs.get('post_id')).comments.all()
 
     def perform_create(self, serializer):
         """Добавляет автора к комментарию."""
         serializer.save(
             author=self.request.user,
-            post_id=self.kwargs.get('post_id')
+            post_id=Post.objects.get(id=self.kwargs.get('post_id')).id
         )
-
-    def perform_update(self, serializer):
-        """Обновляет комментарий."""
-        if serializer.instance.author != self.request.user:
-            raise PermissionDenied('Изменение чужого комментария запрещено!')
-        serializer.save(
-            post_id=self.kwargs.get('post_id')
-        )
-
-    def perform_destroy(self, instance):
-        """Удаляет комментарий."""
-        if instance.author != self.request.user:
-            raise PermissionDenied('Удаление чужого комментария запрещено!')
-        instance.delete()
