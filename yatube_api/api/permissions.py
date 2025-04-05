@@ -1,7 +1,7 @@
 from rest_framework import permissions
 
 
-class OwnerOrReadOnly(permissions.BasePermission):
+class IsAuthenticatedOrOwner(permissions.BasePermission):
     """
     Позволяет редактировать объект только его владельцу.
     Остальным пользователям доступ только на чтение.

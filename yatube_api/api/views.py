@@ -1,8 +1,13 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
 
 from posts.models import Comment, Group, Post
-from .permissions import OwnerOrReadOnly
+from .permissions import IsAuthenticatedOrOwner
 from .serializers import CommentSerializer, GroupSerializer, PostSerializer
+
+
+def get_post(id):
+    return get_object_or_404(Post, id=id)
 
 
 class PostViewSet(viewsets.ModelViewSet):
@@ -10,7 +15,7 @@ class PostViewSet(viewsets.ModelViewSet):
 
     queryset = Post.objects.all()
     serializer_class = PostSerializer
-    permission_classes = (OwnerOrReadOnly,)
+    permission_classes = (IsAuthenticatedOrOwner,)
 
     def perform_create(self, serializer):
         """Добавляет автора к посту."""
@@ -29,14 +34,14 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    permission_classes = (OwnerOrReadOnly,)
+    permission_classes = (IsAuthenticatedOrOwner,)
 
     def get_queryset(self):
-        return Post.objects.get(id=self.kwargs.get('post_id')).comments.all()
+        return get_post(self.kwargs.get('post_id')).comments.all()
 
     def perform_create(self, serializer):
         """Добавляет автора к комментарию."""
         serializer.save(
             author=self.request.user,
-            post_id=Post.objects.get(id=self.kwargs.get('post_id')).id
+            post=get_post(self.kwargs.get('post_id'))
         )
