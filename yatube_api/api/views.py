@@ -6,10 +6,6 @@ from .permissions import IsAuthenticatedOrOwner
 from .serializers import CommentSerializer, GroupSerializer, PostSerializer
 
 
-def get_post(id):
-    return get_object_or_404(Post, id=id)
-
-
 class PostViewSet(viewsets.ModelViewSet):
     """ViewSet для постов."""
 
@@ -37,11 +33,14 @@ class CommentViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticatedOrOwner,)
 
     def get_queryset(self):
-        return get_post(self.kwargs.get('post_id')).comments.all()
+        return self.get_post(self.kwargs['post_id']).comments.all()
 
     def perform_create(self, serializer):
         """Добавляет автора к комментарию."""
         serializer.save(
             author=self.request.user,
-            post=get_post(self.kwargs.get('post_id'))
+            post=self.get_post(self.kwargs['post_id'])
         )
+
+    def get_post(self, id):
+        return get_object_or_404(Post, id=id)
